@@ -1,0 +1,7 @@
+{
+    "board": "arduboy-homemade:avr:arduboy-homemade",
+    "port": "/dev/cu.usbmodem1411",
+    "sketch": "Logix.ino",
+    "output": "../build",
+    "configuration": "based_on=leonardo,boot=org,core=arduboy-core,display=sh1106,flashselect=sda,contrast=normal"
+}
