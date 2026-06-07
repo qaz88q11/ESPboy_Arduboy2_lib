@@ -1,0 +1,6 @@
+{
+    "configuration": "core=arduboy-core,boot=cathy3k",
+    "output": "/Users/simonholmes/projects/build",
+    "board": "arduboy-homemade:avr:arduboy-fx",
+    "sketch": "DogFight.ino"
+}
