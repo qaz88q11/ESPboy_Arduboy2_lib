@@ -71,7 +71,7 @@ void title_Update() {
                 levelSelect.setX(levelSelect.getX() - 1);
             }
 
-            if (justPressed & RIGHT_BUTTON && levelSelect.getX() < 4 && game.getPuzzle(levelSelect.getSelectedPuzzle() + 1).getStatus() != PuzzleStatus::Locked) {
+            if (justPressed & RIGHT_BUTTON && levelSelect.getX() < 3 && game.getPuzzle(levelSelect.getSelectedPuzzle() + 1).getStatus() != PuzzleStatus::Locked) {
                 levelSelect.setX(levelSelect.getX() + 1);
             }
 
