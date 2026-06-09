@@ -179,6 +179,7 @@ void ArduboyPlatform::update() {
     unsigned long currentTime = millis();
     
     // ДИАГНОСТИКА каждые 2 секунды
+/*
     if(currentTime - lastDiagTime > 2000) {
         Serial.print("Pkts recv: "); Serial.print(packetsReceived);
         Serial.print(" sent: "); Serial.print(packetsSent);
@@ -187,6 +188,7 @@ void ArduboyPlatform::update() {
         Serial.print(" buf: "); Serial.println(inputBuffer.count);
         lastDiagTime = currentTime;
     }
+*/
 
     // Отключенный режим
     if(connectionStatus == ConnectionStatus::Disconnected && !isReconnecting) {
@@ -482,18 +484,18 @@ void ArduboyPlatform::parseNetwork() {
     }
     
     if(pkt->packetType == SYNC_PACKET && connectionStatus == ConnectionStatus::Disconnected) {
-        Serial.print("SYNC received. My hostId: "); Serial.print(hostId);
-        Serial.print(" Remote hostId: "); Serial.println(pkt->data);
+        //Serial.print("SYNC received. My hostId: "); Serial.print(hostId);
+        //Serial.print(" Remote hostId: "); Serial.println(pkt->data);
         
         if(hostId > pkt->data) {
             connectionStatus = ConnectionStatus::SerialHost;
             currentLedPattern = LedPattern::CONNECTED;
-            Serial.println("I am HOST");
+            //Serial.println("I am HOST");
         }
         else if(hostId < pkt->data) {
             connectionStatus = ConnectionStatus::SerialClient;
             currentLedPattern = LedPattern::CONNECTED;
-            Serial.println("I am CLIENT");
+            //Serial.println("I am CLIENT");
         }
         return;
     }
@@ -512,9 +514,9 @@ void ArduboyPlatform::parseNetwork() {
         }
         // Не наказываем за рассинхрон - просто продолжаем
         
-        Serial.print("UPDATE recv. Remote frame: "); Serial.print(pkt->networkFrame);
-        Serial.print(" My frame: "); Serial.print(networkFrame);
-        Serial.print(" Data: 0x"); Serial.println(pkt->data, HEX);
+        //Serial.print("UPDATE recv. Remote frame: "); Serial.print(pkt->networkFrame);
+        //Serial.print(" My frame: "); Serial.print(networkFrame);
+        //Serial.print(" Data: 0x"); Serial.println(pkt->data, HEX);
         return;
     }
     
@@ -532,7 +534,7 @@ void ArduboyPlatform::parseNetwork() {
 }
 
 void ArduboyPlatform::disconnectMultiplayer() {
-    Serial.println("Disconnecting...");
+    //Serial.println("Disconnecting...");
     esp_now_deinit();
     WiFi.disconnect();
     connectionStatus = ConnectionStatus::Disconnected;
@@ -547,22 +549,22 @@ void ArduboyPlatform::disconnectMultiplayer() {
 }
 
 bool ArduboyPlatform::connectMultiplayer() {
-    Serial.begin(115200);
-    Serial.println("Starting multiplayer connection...");
+    //Serial.begin(115200);
+    //Serial.println("Starting multiplayer connection...");
     
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
     
     WiFi.macAddress(selfMac);
-    Serial.print("My MAC: ");
-    for(int i=0; i<6; i++) {
-        Serial.print(selfMac[i], HEX);
-        if(i<5) Serial.print(":");
-    }
-    Serial.println();
+    //Serial.print("My MAC: ");
+    //for(int i=0; i<6; i++) {
+    //    Serial.print(selfMac[i], HEX);
+    //    if(i<5) Serial.print(":");
+    //}
+    //Serial.println();
     
     if (esp_now_init() != 0) {
-        Serial.println("ESP-NOW init failed!");
+        //Serial.println("ESP-NOW init failed!");
         currentLedPattern = LedPattern::ERROR;
         return false;
     }
@@ -598,19 +600,19 @@ bool ArduboyPlatform::connectMultiplayer() {
     
     currentLedPattern = LedPattern::SEARCHING;
     
-    Serial.print("Sending SYNC with hostId: "); Serial.println(hostId);
+    //Serial.print("Sending SYNC with hostId: "); Serial.println(hostId);
     sendNetworkPacket(SYNC_PACKET, hostId);
     
     while(connectionStatus == ConnectionStatus::Disconnected) {
         updateLedPattern();
         
         if((millis() - lastPacketSentTime) > 1000) {
-            Serial.println("Resending SYNC...");
+            //Serial.println("Resending SYNC...");
             sendNetworkPacket(SYNC_PACKET, hostId);
         }
         
         if((millis() - discoveryStartTime) > DISCOVERY_TIMEOUT) {
-            Serial.println("Discovery timeout!");
+            //Serial.println("Discovery timeout!");
             currentLedPattern = LedPattern::DISCOVERY_TIMEOUT_PATTERN;
             
             unsigned long timeoutStart = millis();
@@ -632,12 +634,12 @@ bool ArduboyPlatform::connectMultiplayer() {
     currentLedPattern = LedPattern::CONNECTING;
     
     if(remoteMacKnown) {
-        Serial.print("Remote MAC found: ");
-        for(int i=0; i<6; i++) {
-            Serial.print(remoteMac[i], HEX);
-            if(i<5) Serial.print(":");
-        }
-        Serial.println();
+        //Serial.print("Remote MAC found: ");
+        //for(int i=0; i<6; i++) {
+        //    Serial.print(remoteMac[i], HEX);
+        //    if(i<5) Serial.print(":");
+        //}
+        //Serial.println();
         
         esp_now_del_peer(broadcastMac);
         esp_now_add_peer(remoteMac, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
@@ -649,7 +651,7 @@ bool ArduboyPlatform::connectMultiplayer() {
     sendNetworkPacket(SYNC_PACKET, hostId);
     
     currentLedPattern = LedPattern::CONNECTED;
-    Serial.println("Connected!");
+    //Serial.println("Connected!");
     
     return connectionStatus == ConnectionStatus::SerialHost;
 }
