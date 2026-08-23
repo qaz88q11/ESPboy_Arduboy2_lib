@@ -828,8 +828,11 @@ void CircleLaunch::showParticlesAt(int x, int y, int count, int speed) {
 
     s16 xDelta = engine.xDirectionsN(direction, CIRCLE_LAUNCH_PARTICLES_DIRECTIONS_COUNT);
     s16 yDelta = engine.yDirectionsN(direction, CIRCLE_LAUNCH_PARTICLES_DIRECTIONS_COUNT);
-    particles[i].xSpeed = (speed * xDelta) / 100;
-    particles[i].ySpeed = (speed * yDelta) / 100;
+    //particles[i].xSpeed = (speed * xDelta) / 100;
+    //particles[i].ySpeed = (speed * yDelta) / 100;
+    particles[i].xSpeed = (speed * (int32_t)xDelta * 256) / 10000;
+    particles[i].ySpeed = (speed * (int32_t)yDelta * 256) / 10000;
+    
     // particles[i].xSpeed = D2FR(xDelta / 100.0 * (speed / 100.0), R8);
     // particles[i].ySpeed = D2FR(yDelta / 100.0 * (speed / 100.0), R8);
 
@@ -855,7 +858,11 @@ void CircleLaunch::updateParticles() {
     
     particles[i].x += particles[i].xSpeed;
     particles[i].y += particles[i].ySpeed;
-    particles[i].ySpeed += FR_NUM(0, 3, 2, R8);
+    
+    //particles[i].ySpeed += FR_NUM(0, 3, 2, R8);
+
+    particles[i].ySpeed += 8;
+
 
     // particles[i].cX += particles[i].speedCx;
     // particles[i].cY += particles[i].speedCy;
