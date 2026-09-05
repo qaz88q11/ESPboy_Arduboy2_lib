@@ -1,10 +1,9 @@
-
 #define USE_nbSPI //accelerates gfx but less hardware compatibility
 #define MAX_PALETTES 37
 #define DEFAULT_PALETTE 11
 #define Y_SCALE_PRESET 1
 
-#pragma GCC optimize ("-O3")
+#pragma GCC optimize ("-O2")
 #pragma GCC push_options
 
 /*
@@ -107,6 +106,10 @@ Example Usage:
 //#include "nbSPI.h"
 #include "palettesCollection.h"
 
+#ifndef IRAM_ATTR
+#define IRAM_ATTR ICACHE_RAM_ATTR
+#endif
+
 #ifdef USE_nbSPI
 extern bool nbSPI_isBusy();
 extern void nbSPI_writeBytes(uint8_t *data, uint16_t size);
@@ -126,14 +129,14 @@ extern ESPboyInit myESPboy;
  #define DEFAULT_PALETTE 0 //check list of palettes in "palettesCollection.h"
 #endif
 
-  PROGMEM const static uint8_t decodePaletteL4C[8] = {3, 2, 1, 0, 1, 0, 0, 0};
-  PROGMEM const static uint8_t decodePaletteL4T[8] = {3, 2, 2, 1, 2, 1, 1, 0};
-  PROGMEM const static uint8_t decodePaletteL3L[8] = {3, 1, 0, 0, 0, 0, 0, 0};
-  PROGMEM const static uint8_t decodePaletteL3D[8] = {3, 2, 0, 0, 0, 0, 0, 0};
-  PROGMEM const static uint8_t decodePaletteL3M[8] = {3, 2, 0, 0, 0, 0, 0, 0};
-  PROGMEM const static uint8_t decodePaletteL3 [8] = {3, 2, 0, 0, 0, 0, 0, 0};
+  const static uint8_t decodePaletteL4C[8] = {3, 2, 1, 0, 1, 0, 0, 0};
+  const static uint8_t decodePaletteL4T[8] = {3, 2, 2, 1, 2, 1, 1, 0};
+  const static uint8_t decodePaletteL3L[8] = {3, 1, 0, 0, 0, 0, 0, 0};
+  const static uint8_t decodePaletteL3D[8] = {3, 2, 0, 0, 0, 0, 0, 0};
+  const static uint8_t decodePaletteL3M[8] = {3, 2, 0, 0, 0, 0, 0, 0};
+  const static uint8_t decodePaletteL3 [8] = {3, 2, 0, 0, 0, 0, 0, 0};
 
-  PROGMEM const static uint8_t  *paletteDecodeTable[] = {decodePaletteL4C, decodePaletteL4T, decodePaletteL3L, decodePaletteL3D, decodePaletteL3M, decodePaletteL3};
+  const static uint8_t  *paletteDecodeTable[] = {decodePaletteL4C, decodePaletteL4T, decodePaletteL3L, decodePaletteL3D, decodePaletteL3M, decodePaletteL3};
 
   static uint16_t currentPalette[8];
   static uint8_t paletteDecodeTableIndex = 0;
@@ -286,283 +289,38 @@ struct ArduboyG_Common : public BASE
     
     static void setUpdateHz(uint8_t hz) {}
 
-    static void drawBitmap(
-        int16_t x, int16_t y,
-        uint8_t const* bitmap,
-        uint8_t w, uint8_t h,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawBitmap(x, y, bitmap, w, h, planeColor(current_plane, color));
-    }
-    
-    template<uint8_t PLANE>
-    static void drawBitmap(
-        int16_t x, int16_t y,
-        uint8_t const* bitmap,
-        uint8_t w, uint8_t h,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawBitmap(x, y, bitmap, w, h, planeColor<PLANE>(color));
-    }
-    
-    static void drawSlowXYBitmap(
-        int16_t x, int16_t y,
-        uint8_t const* bitmap,
-        uint8_t w, uint8_t h,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawSlowXYBitmap(x, y, bitmap, w, h, planeColor(current_plane, color));
-    }
-    
-    template<uint8_t PLANE>
-    static void drawSlowXYBitmap(
-        int16_t x, int16_t y,
-        uint8_t const* bitmap,
-        uint8_t w, uint8_t h,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawSlowXYBitmap(x, y, bitmap, w, h, planeColor<PLANE>(color));
-    }
-    
-    static void drawCompressed(
-        int16_t sx, int16_t sy,
-        uint8_t const* bitmap,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawCompressed(sx, sy, bitmap, planeColor(current_plane, color));
-    }
-    
-    template<uint8_t PLANE>
-    static void drawCompressed(
-        int16_t sx, int16_t sy,
-        uint8_t const* bitmap,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawCompressed(sx, sy, bitmap, planeColor<PLANE>(color));
-    }
-    
-    static void drawPixel(
-        int16_t x, int16_t y,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawPixel(x, y, planeColor(current_plane, color));
-    }
-    
-    template<uint8_t PLANE>
-    static void drawPixel(
-        int16_t x, int16_t y,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawPixel(x, y, planeColor<PLANE>(color));
-    }
-    
-    static void drawFastHLine(
-        int16_t x, int16_t y,
-        uint8_t w,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawFastHLine(x, y, w, planeColor(current_plane, color));
-    }
-    
-    template<uint8_t PLANE>
-    static void drawFastHLine(
-        int16_t x, int16_t y,
-        uint8_t w,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawFastHLine(x, y, w, planeColor<PLANE>(color));
-    }
-    
-    static void drawFastVLine(
-        int16_t x, int16_t y,
-        uint8_t h,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawFastVLine(x, y, h, planeColor(current_plane, color));
-    }
-    
-    template<uint8_t PLANE>
-    static void drawFastVLine(
-        int16_t x, int16_t y,
-        uint8_t h,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawFastVLine(x, y, h, planeColor<PLANE>(color));
-    }
-    
-    static void drawLine(
-        int16_t x0, int16_t y0,
-        int16_t x1, int16_t y1,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawLine(x0, y0, x1, y1, planeColor(current_plane, color));
-    }
-    
-    template<uint8_t PLANE>
-    static void drawLine(
-        int16_t x0, int16_t y0,
-        int16_t x1, int16_t y1,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawLine(x0, y0, x1, y1, planeColor<PLANE>(color));
-    }
-    
-    static void drawCircle(
-        int16_t x0, int16_t y0,
-        uint8_t r,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawCircle(x0, y0, r, planeColor(current_plane, color));
-    }
-    
-    template<uint8_t PLANE>
-    static void drawCircle(
-        int16_t x0, int16_t y0,
-        uint8_t r,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawCircle(x0, y0, r, planeColor<PLANE>(color));
-    }
-    
-    static void drawTriangle(
-        int16_t x0, int16_t y0,
-        int16_t x1, int16_t y1,
-        int16_t x2, int16_t y2,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawTriangle(x0, y0, x1, y1, x2, y2, planeColor(current_plane, color));
-    }
-    
-    template<uint8_t PLANE>
-    static void drawTriangle(
-        int16_t x0, int16_t y0,
-        int16_t x1, int16_t y1,
-        int16_t x2, int16_t y2,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawTriangle(x0, y0, x1, y1, x2, y2, planeColor<PLANE>(color));
-    }
-    
-    static void drawRect(
-        int16_t x, int16_t y,
-        uint8_t w, uint8_t h,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawRect(x, y, w, h, planeColor(current_plane, color));
-    }
-    
-    template<uint8_t PLANE>
-    static void drawRect(
-        int16_t x, int16_t y,
-        uint8_t w, uint8_t h,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawRect(x, y, w, h, planeColor<PLANE>(color));
-    }
-    
-    static void drawRoundRect(
-        int16_t x, int16_t y,
-        uint8_t w, uint8_t h,
-        uint8_t r,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawRoundRect(x, y, w, h, r, planeColor(current_plane, color));
-    }
-
-    template<uint8_t PLANE>
-    static void drawRoundRect(
-        int16_t x, int16_t y,
-        uint8_t w, uint8_t h,
-        uint8_t r,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::drawRoundRect(x, y, w, h, r, planeColor<PLANE>(color));
-    }
-    
-    static void fillCircle(
-        int16_t x0, int16_t y0,
-        uint8_t r,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::fillCircle(x0, y0, r, planeColor(current_plane, color));
-    }
-    
-    template<uint8_t PLANE>
-    static void fillCircle(
-        int16_t x0, int16_t y0,
-        uint8_t r,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::fillCircle(x0, y0, r, planeColor<PLANE>(color));
-    }
-    
-    static void fillTriangle(
-        int16_t x0, int16_t y0,
-        int16_t x1, int16_t y1,
-        int16_t x2, int16_t y2,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::fillTriangle(x0, y0, x1, y1, x2, y2, planeColor(current_plane, color));
-    }
-    
-    template<uint8_t PLANE>
-    static void fillTriangle(
-        int16_t x0, int16_t y0,
-        int16_t x1, int16_t y1,
-        int16_t x2, int16_t y2,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::fillTriangle(x0, y0, x1, y1, x2, y2, planeColor<PLANE>(color));
-    }
-    
-    static void fillRect(
-        int16_t x, int16_t y,
-        uint8_t w, uint8_t h,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::fillRect(x, y, w, h, planeColor(current_plane, color));
-    }
-    
-    template<uint8_t PLANE>
-    static void fillRect(
-        int16_t x, int16_t y,
-        uint8_t w, uint8_t h,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::fillRect(x, y, w, h, planeColor<PLANE>(color));
-    }
-    
-    static void fillRoundRect(
-        int16_t x, int16_t y,
-        uint8_t w, uint8_t h,
-        uint8_t r,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::fillRoundRect(x, y, w, h, r, planeColor(current_plane, color));
-    }
-    
-    template<uint8_t PLANE>
-    static void fillRoundRect(
-        int16_t x, int16_t y,
-        uint8_t w, uint8_t h,
-        uint8_t r,
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::fillRoundRect(x, y, w, h, r, planeColor<PLANE>(color));
-    }
-    
-    static void fillScreen(
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::fillScreen(planeColor(current_plane, color));
-    }
-    
-    template<uint8_t PLANE>
-    static void fillScreen(
-        uint8_t color = WHITE)
-    {
-        Arduboy2Base::fillScreen(planeColor<PLANE>(color));
-    }
+    static void drawBitmap(int16_t x, int16_t y, uint8_t const* bitmap, uint8_t w, uint8_t h, uint8_t color = WHITE) { Arduboy2Base::drawBitmap(x, y, bitmap, w, h, planeColor(current_plane, color)); }
+    template<uint8_t PLANE> static void drawBitmap(int16_t x, int16_t y, uint8_t const* bitmap, uint8_t w, uint8_t h, uint8_t color = WHITE) { Arduboy2Base::drawBitmap(x, y, bitmap, w, h, planeColor<PLANE>(color)); }
+    static void drawSlowXYBitmap(int16_t x, int16_t y, uint8_t const* bitmap, uint8_t w, uint8_t h, uint8_t color = WHITE) { Arduboy2Base::drawSlowXYBitmap(x, y, bitmap, w, h, planeColor(current_plane, color)); }
+    template<uint8_t PLANE> static void drawSlowXYBitmap(int16_t x, int16_t y, uint8_t const* bitmap, uint8_t w, uint8_t h, uint8_t color = WHITE) { Arduboy2Base::drawSlowXYBitmap(x, y, bitmap, w, h, planeColor<PLANE>(color)); }
+    static void drawCompressed(int16_t sx, int16_t sy, uint8_t const* bitmap, uint8_t color = WHITE) { Arduboy2Base::drawCompressed(sx, sy, bitmap, planeColor(current_plane, color)); }
+    template<uint8_t PLANE> static void drawCompressed(int16_t sx, int16_t sy, uint8_t const* bitmap, uint8_t color = WHITE) { Arduboy2Base::drawCompressed(sx, sy, bitmap, planeColor<PLANE>(color)); }
+    static void drawPixel(int16_t x, int16_t y, uint8_t color = WHITE) { Arduboy2Base::drawPixel(x, y, planeColor(current_plane, color)); }
+    template<uint8_t PLANE> static void drawPixel(int16_t x, int16_t y, uint8_t color = WHITE) { Arduboy2Base::drawPixel(x, y, planeColor<PLANE>(color)); }
+    static void drawFastHLine(int16_t x, int16_t y, uint8_t w, uint8_t color = WHITE) { Arduboy2Base::drawFastHLine(x, y, w, planeColor(current_plane, color)); }
+    template<uint8_t PLANE> static void drawFastHLine(int16_t x, int16_t y, uint8_t w, uint8_t color = WHITE) { Arduboy2Base::drawFastHLine(x, y, w, planeColor<PLANE>(color)); }
+    static void drawFastVLine(int16_t x, int16_t y, uint8_t h, uint8_t color = WHITE) { Arduboy2Base::drawFastVLine(x, y, h, planeColor(current_plane, color)); }
+    template<uint8_t PLANE> static void drawFastVLine(int16_t x, int16_t y, uint8_t h, uint8_t color = WHITE) { Arduboy2Base::drawFastVLine(x, y, h, planeColor<PLANE>(color)); }
+    static void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color = WHITE) { Arduboy2Base::drawLine(x0, y0, x1, y1, planeColor(current_plane, color)); }
+    template<uint8_t PLANE> static void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color = WHITE) { Arduboy2Base::drawLine(x0, y0, x1, y1, planeColor<PLANE>(color)); }
+    static void drawCircle(int16_t x0, int16_t y0, uint8_t r, uint8_t color = WHITE) { Arduboy2Base::drawCircle(x0, y0, r, planeColor(current_plane, color)); }
+    template<uint8_t PLANE> static void drawCircle(int16_t x0, int16_t y0, uint8_t r, uint8_t color = WHITE) { Arduboy2Base::drawCircle(x0, y0, r, planeColor<PLANE>(color)); }
+    static void drawTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint8_t color = WHITE) { Arduboy2Base::drawTriangle(x0, y0, x1, y1, x2, y2, planeColor(current_plane, color)); }
+    template<uint8_t PLANE> static void drawTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint8_t color = WHITE) { Arduboy2Base::drawTriangle(x0, y0, x1, y1, x2, y2, planeColor<PLANE>(color)); }
+    static void drawRect(int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t color = WHITE) { Arduboy2Base::drawRect(x, y, w, h, planeColor(current_plane, color)); }
+    template<uint8_t PLANE> static void drawRect(int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t color = WHITE) { Arduboy2Base::drawRect(x, y, w, h, planeColor<PLANE>(color)); }
+    static void drawRoundRect(int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t r, uint8_t color = WHITE) { Arduboy2Base::drawRoundRect(x, y, w, h, r, planeColor(current_plane, color)); }
+    template<uint8_t PLANE> static void drawRoundRect(int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t r, uint8_t color = WHITE) { Arduboy2Base::drawRoundRect(x, y, w, h, r, planeColor<PLANE>(color)); }
+    static void fillCircle(int16_t x0, int16_t y0, uint8_t r, uint8_t color = WHITE) { Arduboy2Base::fillCircle(x0, y0, r, planeColor(current_plane, color)); }
+    template<uint8_t PLANE> static void fillCircle(int16_t x0, int16_t y0, uint8_t r, uint8_t color = WHITE) { Arduboy2Base::fillCircle(x0, y0, r, planeColor<PLANE>(color)); }
+    static void fillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint8_t color = WHITE) { Arduboy2Base::fillTriangle(x0, y0, x1, y1, x2, y2, planeColor(current_plane, color)); }
+    template<uint8_t PLANE> static void fillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint8_t color = WHITE) { Arduboy2Base::fillTriangle(x0, y0, x1, y1, x2, y2, planeColor<PLANE>(color)); }
+    static void fillRect(int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t color = WHITE) { Arduboy2Base::fillRect(x, y, w, h, planeColor(current_plane, color)); }
+    template<uint8_t PLANE> static void fillRect(int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t color = WHITE) { Arduboy2Base::fillRect(x, y, w, h, planeColor<PLANE>(color)); }
+    static void fillRoundRect(int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t r, uint8_t color = WHITE) { Arduboy2Base::fillRoundRect(x, y, w, h, r, planeColor(current_plane, color)); }
+    template<uint8_t PLANE> static void fillRoundRect(int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t r, uint8_t color = WHITE) { Arduboy2Base::fillRoundRect(x, y, w, h, r, planeColor<PLANE>(color)); }
+    static void fillScreen(uint8_t color = WHITE) { Arduboy2Base::fillScreen(planeColor(current_plane, color)); }
+    template<uint8_t PLANE> static void fillScreen(uint8_t color = WHITE) { Arduboy2Base::fillScreen(planeColor<PLANE>(color)); }
 
     static bool needsUpdate(){
         if(update_flag == true){
@@ -606,11 +364,8 @@ struct ArduboyG_Common : public BASE
     ABG_NOT_SUPPORTED static void paint8Pixels(uint8_t);
     ABG_NOT_SUPPORTED static void paintScreen(uint8_t const*);
     ABG_NOT_SUPPORTED static void paintScreen(uint8_t[], bool);
-    //ABG_NOT_SUPPORTED static void setFrameDuration(uint8_t);
-    //ABG_NOT_SUPPORTED static void setFrameRate(uint8_t);
     ABG_NOT_SUPPORTED static void display();
     ABG_NOT_SUPPORTED static void display(bool);
-    //ABG_NOT_SUPPORTED static bool nextFrame();
     ABG_NOT_SUPPORTED static bool nextFrameDEV();
 
 
@@ -668,7 +423,7 @@ protected:
 
 
 //// START renderPlanesToLCD 
-  static void doDisplay(uint8_t clear){
+  static void IRAM_ATTR doDisplay(uint8_t clear){
      static bool keysPass=0;
      keysPass =! keysPass;
      if(keysPass) doSettings();
@@ -685,6 +440,7 @@ protected:
           
         currentDBT currentDataByte0, currentDataByte1, currentDataByte2;
         uint16_t addr, currentDataAddr;
+        uint16_t step = arduboyYscaleFlag ? WIDTH*2 : WIDTH;
 
         ESP.wdtFeed();
           
@@ -708,49 +464,62 @@ protected:
                 currentDataByte1.bit.hh = plane1[currentDataAddr];
                 currentDataByte2.bit.hh = b[currentDataAddr];
                 currentDataAddr -= 383;
-                arduboyYscaleFlag ? addr = xPos + (kPos<<13) : addr = xPos + (kPos<<12);
+                
+                addr = arduboyYscaleFlag ? xPos + (kPos<<13) : xPos + (kPos<<12);
+                
+                uint32_t b0 = currentDataByte0.byte;
+                uint32_t b1 = currentDataByte1.byte;
+                uint32_t b2 = currentDataByte2.byte;
       
-                for (uint8_t yPos = 0; yPos < 32; yPos++) {
-                  oBuffer[addr] = (currentPalette[(currentDataByte0.byte & 0x01) | ((currentDataByte1.byte & 0x01)<<1) | ((currentDataByte2.byte & 0x01)<<2)]);  
-                  arduboyYscaleFlag ? addr+=WIDTH*2 : addr+=WIDTH;            
-                  currentDataByte0.byte >>= 1;
-                  currentDataByte1.byte >>= 1;
-                  currentDataByte2.byte >>= 1;
+                for (uint8_t yPos = 0; yPos < 8; yPos++) {
+                  oBuffer[addr] = currentPalette[(b0 & 0x01) | ((b1 & 0x01)<<1) | ((b2 & 0x01)<<2)]; addr += step; b0 >>= 1; b1 >>= 1; b2 >>= 1;
+                  oBuffer[addr] = currentPalette[(b0 & 0x01) | ((b1 & 0x01)<<1) | ((b2 & 0x01)<<2)]; addr += step; b0 >>= 1; b1 >>= 1; b2 >>= 1;
+                  oBuffer[addr] = currentPalette[(b0 & 0x01) | ((b1 & 0x01)<<1) | ((b2 & 0x01)<<2)]; addr += step; b0 >>= 1; b1 >>= 1; b2 >>= 1;
+                  oBuffer[addr] = currentPalette[(b0 & 0x01) | ((b1 & 0x01)<<1) | ((b2 & 0x01)<<2)]; addr += step; b0 >>= 1; b1 >>= 1; b2 >>= 1;
                 }
              }
           }
-          
           else{
              for (uint8_t xPos = 0; xPos < WIDTH; xPos++) {
-                currentDataByte1.bit.ll = plane0[currentDataAddr];
-                currentDataByte2.bit.ll = plane1[currentDataAddr];
+                currentDataByte0.bit.ll = plane0[currentDataAddr];
+                currentDataByte1.bit.ll = plane1[currentDataAddr];
                 currentDataAddr += 128;
-                currentDataByte1.bit.hl = plane0[currentDataAddr];         
-                currentDataByte2.bit.hl = plane1[currentDataAddr];
+                currentDataByte0.bit.hl = plane0[currentDataAddr];         
+                currentDataByte1.bit.hl = plane1[currentDataAddr];
                 currentDataAddr += 128;
-                currentDataByte1.bit.lh = plane0[currentDataAddr];
-                currentDataByte2.bit.lh = plane1[currentDataAddr];
+                currentDataByte0.bit.lh = plane0[currentDataAddr];
+                currentDataByte1.bit.lh = plane1[currentDataAddr];
                 currentDataAddr += 128;
-                currentDataByte1.bit.hh = plane0[currentDataAddr];         
-                currentDataByte2.bit.hh = plane1[currentDataAddr];
+                currentDataByte0.bit.hh = plane0[currentDataAddr];         
+                currentDataByte1.bit.hh = plane1[currentDataAddr];
                 currentDataAddr -= 383;
-                arduboyYscaleFlag ? addr = xPos + (kPos<<13) : addr = xPos + (kPos<<12);
-                for (uint8_t yPos = 0; yPos < 32; yPos++) { 
-                  oBuffer[addr] = (currentPalette[(currentDataByte0.byte & 0x01) | ((currentDataByte1.byte & 0x01)<<1)]);  
-                  arduboyYscaleFlag ? addr+=WIDTH*2 : addr+=WIDTH; 
-                  currentDataByte0.byte >>= 1;
-                  currentDataByte1.byte >>= 1;
+                
+                addr = arduboyYscaleFlag ? xPos + (kPos<<13) : xPos + (kPos<<12);
+                
+                uint32_t b0 = currentDataByte0.byte;
+                uint32_t b1 = currentDataByte1.byte;
+                
+                for (uint8_t yPos = 0; yPos < 8; yPos++) { 
+                  oBuffer[addr] = currentPalette[(b0 & 0x01) | ((b1 & 0x01)<<1)]; addr += step; b0 >>= 1; b1 >>= 1;
+                  oBuffer[addr] = currentPalette[(b0 & 0x01) | ((b1 & 0x01)<<1)]; addr += step; b0 >>= 1; b1 >>= 1;
+                  oBuffer[addr] = currentPalette[(b0 & 0x01) | ((b1 & 0x01)<<1)]; addr += step; b0 >>= 1; b1 >>= 1;
+                  oBuffer[addr] = currentPalette[(b0 & 0x01) | ((b1 & 0x01)<<1)]; addr += step; b0 >>= 1; b1 >>= 1;
                 }
              }           
           }
         }
 
-          addr = 0;
-          if(arduboyYscaleFlag)
-            for(uint8_t i=0; i<64; i++){
-              memcpy(&oBuffer[addr+WIDTH], &oBuffer[addr], WIDTH*2);
-              addr+=WIDTH*2;
+          if(arduboyYscaleFlag) {
+            uint32_t* oBuf32 = (uint32_t*)oBuffer;
+            for(uint8_t i = 0; i < 64; i++){
+              uint32_t* src32 = oBuf32;
+              oBuf32 += (WIDTH >> 1); 
+              for(uint8_t j = 0; j < (WIDTH >> 1); j++){
+                oBuf32[j] = src32[j]; 
+              }
+              oBuf32 += (WIDTH >> 1); 
             }
+          }
           
 #ifndef USE_nbSPI
           arduboyYscaleFlag ? myESPboy.tft.pushPixels(oBuffer, WIDTH*128) : myESPboy.tft.pushPixels(oBuffer, WIDTH*64); 
@@ -809,7 +578,6 @@ struct ArduboyG_Config : public abg_detail::ArduboyG_Common<
     static void startGray()
     {
         ArduboyGBase_Config<MODE, FLAGS>::startGray();
-        //Arduboy2::setTextColor(WHITE); // WHITE is 3 not 1
     }
     
     static void startGrey() { startGray(); }
@@ -831,7 +599,6 @@ struct ArduboyG_Config : public abg_detail::ArduboyG_Common<
             A::drawChar(x, y, c, color, bg, size);
     }
     
-    // duplicate from Arduboy2 code to use overridden drawChar
     size_t write(uint8_t c) override
     {        
         using A = Arduboy2;
