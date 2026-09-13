@@ -1,0 +1,20 @@
+{ 
+  "author" : "Pres Play on Tape",
+  "binaries" : [ { 
+        "cartimage" : "Dice.png",
+        "device" : "ArduboyMini",
+        "filename" : "DiceOfKalma.hex",
+        "flashdata" : "DiceOfKalma-data.bin",
+        "flashsave" : "DiceOfKalma-save.bin",
+        "title" : "Dice Of Kalma"
+      } ],
+  "contributors" : [  ],
+  "description" : "Dice Of Kalma.",
+  "email" : "",
+  "genre" : "Strategy",
+  "schemaVersion" : 4,
+  "sourceUrl" : "",
+  "title" : "Dice Of Kalma",
+  "url" : "https://github.com/Press-Play-On-Tape/Dice Of Kalma",
+  "version" : "V1.0"
+}

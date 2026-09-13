@@ -1,0 +1,7 @@
+{
+    "sketch": "DiceOfKalma.ino",
+    "board": "arduboy-homemade:avr:arduboy-mini",
+    "output": "../build",
+    "port": "/dev/cu.usbmodem14601",
+    "configuration": "core=arduboy-core,boot=cathy3k"
+}
