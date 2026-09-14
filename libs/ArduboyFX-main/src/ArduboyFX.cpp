@@ -1,4 +1,3 @@
-
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // check "ArduboyFX.h" to define ArduboyFX library MODE!
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -6,9 +5,7 @@
 #include "ArduboyFX.h"
 #include "font5x7local.h"
 
-#ifndef USE_LITTLEFS
-  extern uint8_t fxdta[];
-#endif
+extern uint8_t fxdta[];
 
 // [OPTIMIZATION]: One-time allocated sprite cache buffer
 static uint8_t* bmpCache = nullptr;
@@ -45,16 +42,13 @@ static uint8_t* bmpCache = nullptr;
 volatile uint32_t globalAddress = 0; 
 volatile uint32_t globalAddressSave = EEPROMWRITEOFFSET;
 
-uint16_t FX::programDataPage = 0; // program read only data location in flash memory
-uint16_t FX::programSavePage = 0; // program read and write data location in flash memory
+uint16_t FX::programDataPage = 0; 
+uint16_t FX::programSavePage = 0; 
 Font     FX::font;
 Cursor   FX::cursor = {0,0,0,WIDTH};
 
 FrameControl FX::frameControl;
 
-// =========================================================
-// RLE DECODER (Used only for standard unpaged format)
-// =========================================================
 #if !defined(USE_LZSS_PACKING) && defined(USE_RLE_COMPRESSION)
 void FX::Rle_Decode(unsigned char *inbuf, uint32_t inSize){
     uint8_t *outBuf;
@@ -98,15 +92,16 @@ void FX::Rle_Decode(unsigned char *inbuf, uint32_t inSize){
 }
 #endif
 
-// =========================================================
-// LZSS DECODER (Decompresses 4KB pages on-the-fly)
-// =========================================================
 #ifdef USE_LZSS_PACKING
   static uint8_t* audioCache = nullptr;
   static uint16_t audioCurrentPage = 0xFFFF;
 
   static void loadAudioPage(uint16_t page_idx) {
       if (!audioCache) return;
+      uint32_t total_pages = 0;
+      memcpy_P(&total_pages, &fxdta[0], 4);
+      if (page_idx >= total_pages) return;
+
       uint32_t offset;
       memcpy_P(&offset, &fxdta[4 + page_idx * 4], 4);
       uint32_t comp_ptr = offset;
@@ -138,8 +133,8 @@ void FX::Rle_Decode(unsigned char *inbuf, uint32_t inSize){
 
   void FX::readAudioBytes(uint24_t address, uint8_t* buffer, size_t length) {
       while (length > 0) {
-          uint16_t page_idx = address / 4096;
-          uint16_t page_offset = address % 4096;
+          uint16_t page_idx = address >> 12;
+          uint16_t page_offset = address & 0x0FFF;
           if (page_idx != audioCurrentPage) {
               loadAudioPage(page_idx);
               audioCurrentPage = page_idx;
@@ -154,14 +149,10 @@ void FX::Rle_Decode(unsigned char *inbuf, uint32_t inSize){
 static void loadPage(uint16_t page_idx) {
     if (!pagedCache) return;
     
-    // Считываем общее количество страниц из заголовка fxdta
     uint32_t total_pages = 0;
     memcpy_P(&total_pages, &fxdta[0], 4);
 
-    // Защита от выхода за пределы массива
-    if (page_idx >= total_pages) {
-        return;
-    }
+    if (page_idx >= total_pages) return;
 
     uint32_t offset;
     memcpy_P(&offset, &fxdta[4 + page_idx * 4], 4);
@@ -169,16 +160,14 @@ static void loadPage(uint16_t page_idx) {
 
     uint16_t out_pos = 0;
     while (out_pos < 4096) {
-        ESP.wdtFeed(); // Сбрасываем Watchdog на каждом шаге распаковки
+        ESP.wdtFeed(); 
         
         uint8_t flags = pgm_read_byte(&fxdta[comp_ptr++]);
 
         for (int bit = 0; bit < 8 && out_pos < 4096; bit++) {
             if (flags & (1 << bit)) {
-                // Literal Byte
                 pagedCache[out_pos++] = pgm_read_byte(&fxdta[comp_ptr++]);
             } else {
-                // LZ Match
                 uint8_t b1 = pgm_read_byte(&fxdta[comp_ptr++]);
                 uint8_t b2 = pgm_read_byte(&fxdta[comp_ptr++]);
 
@@ -196,8 +185,7 @@ static void loadPage(uint16_t page_idx) {
                 
                 while (match_len-- && out_pos < 4096) {
                     pagedCache[out_pos] = pagedCache[match_pos];
-                    out_pos++;
-                    match_pos++;
+                    out_pos++; match_pos++;
                 }
             }
         }
@@ -207,7 +195,6 @@ static void loadPage(uint16_t page_idx) {
 
 uint8_t FX::writeByte(uint8_t data){
 #ifdef USE_LZSS_PACKING
-  // Writing to compressed graphics file is disabled
   globalAddress++;
   return 0;
 #else
@@ -228,8 +215,8 @@ uint8_t FX::writeByte(uint8_t data){
 
 uint8_t FX::readByte(){
 #ifdef USE_LZSS_PACKING
-  uint16_t page_idx = globalAddress / 4096;
-  uint16_t page_offset = globalAddress % 4096;
+  uint16_t page_idx = globalAddress >> 12;
+  uint16_t page_offset = globalAddress & 0x0FFF;
   
   if (page_idx != currentPage) {
       loadPage(page_idx);
@@ -260,30 +247,25 @@ uint8_t FX::readByte(){
 void FX::safeCommit() {
     ESP.wdtFeed();
 #if defined(ESP8266)
-    // Глушим аппаратный таймер звука, освобождая шину SPI
     timer1_disable(); 
 #endif
 
     EEPROM.commit();
 
 #if defined(ESP8266)
-    // Возвращаем таймер звука на частоте 22kHz
     timer1_enable(TIM_DIV1, TIM_EDGE, TIM_LOOP);
     timer1_write(80 * 1000000 / 22000); 
 #endif
     ESP.wdtFeed();
 }
 
-
 void FX::begin(){ 
-    // Allocate shared sprite cache RAM buffer
     if (!bmpCache) {
         bmpCache = (uint8_t*)malloc(BMP_CACHE_SIZE);
 #ifdef USE_LZSS_PACKING    
     if (!audioCache) audioCache = (uint8_t*)malloc(4096);
 #endif
     }
-
 
 #ifdef USE_LZSS_PACKING
     if (!pagedCache) {
@@ -298,7 +280,6 @@ void FX::begin(){
         fle = LittleFS.open("/fxdta_paged.bin", "r");
     #endif
 #else
-    // Standard initialization
     #ifdef USE_LITTLEFS
         if (!fsCache.buffer) {
             fsCache.buffer = (uint8_t*)malloc(STREAM_CACHE_SIZE);
@@ -307,11 +288,6 @@ void FX::begin(){
 
     EEPROM.begin(4096);
 
-#ifdef DEBUG_INFO_ON
-    Serial.begin(115200);
-    Serial.println();
-#endif
-
 #ifdef USE_LITTLEFS    
     LittleFSConfig cfg;
     cfg.setAutoFormat(true);
@@ -319,39 +295,24 @@ void FX::begin(){
     LittleFS.begin();
     fle = LittleFS.open("/fxdta.bin", "r+");
     fle.seek(0, SeekEnd);
-#ifdef DEBUG_INFO_ON
-    Serial.println();
-    Serial.println(fle.position());
-#endif    
     
 #ifdef USE_RLE_COMPRESSION
     if (!fle || fle.position() != UNPACKED_FILE_SIZE) {
 #else
     if (!fle) {
 #endif
-
-#ifdef DEBUG_INFO_ON
-      Serial.println("fxdta.bin not found!");
-#endif
-
       fle.close();
       LittleFS.format();
       fle = LittleFS.open("/fxdta.bin", "w+");
 #ifdef USE_RLE_COMPRESSION
-  #ifdef DEBUG_INFO_ON
-      Serial.println("Decoding file from PROGMEM...");
-  #endif    
       Rle_Decode((unsigned char *)fxdta, RLE_FILE_SIZE);
 #endif
       fle.close();
       fle = LittleFS.open("/fxdta.bin", "r+");
     }
     fle.seek(0, SeekSet);
-#ifdef DEBUG_INFO_ON
-     Serial.println("FX data OK");
 #endif
-#endif
-#endif // USE_LZSS_PACKING
+#endif 
 }
 
 void FX::begin(uint16_t developmentDataPage){
@@ -378,7 +339,6 @@ void FX::readJedecID(JedecID* id){
 }
 
 bool FX::detect(){return true;}
-
 void FX::noFXReboot(){ESP.restart();}
 
 void FX::seekData(uint24_t address){
@@ -394,15 +354,12 @@ void FX::seekSave(uint24_t address){
   globalAddressSave = address + EEPROMWRITEOFFSET;
 }
 
-uint8_t FX::readPendingUInt8(){
-   return readByte();
-}
+uint8_t FX::readPendingUInt8(){ return readByte(); }
+uint8_t FX::readPendingLastUInt8(){ return readByte(); }
 
-uint8_t FX::readPendingLastUInt8(){
-   return readByte();
-}
-
-// Batch reading multi-byte values
+// ---------------------------------------------------------
+// ОРИГИНАЛЬНОЕ ЧТЕНИЕ: возвращаем быстрые аппаратные запросы к файловой системе 
+// ---------------------------------------------------------
 uint16_t FX::readPendingUInt16(){
   uint8_t b[2];
   readBytes(b, 2);
@@ -436,8 +393,8 @@ uint32_t FX::readPendingLastUInt32(){
 void FX::readBytes(uint8_t* buffer, size_t length){
 #ifdef USE_LZSS_PACKING
   while (length > 0) {
-      uint16_t page_idx = globalAddress / 4096;
-      uint16_t page_offset = globalAddress % 4096;
+      uint16_t page_idx = globalAddress >> 12;
+      uint16_t page_offset = globalAddress & 0x0FFF;
       
       if (page_idx != currentPage) {
           loadPage(page_idx);
@@ -457,6 +414,7 @@ void FX::readBytes(uint8_t* buffer, size_t length){
   }
 #else
   #ifdef USE_LITTLEFS
+    // Прямое чтение из встроенного 4 КБ кэша LittleFS - это самый быстрый способ
     fle.seek(globalAddress, SeekSet); 
     fle.readBytes((char *)buffer, length);
     globalAddress += length;
@@ -497,7 +455,6 @@ void FX::readSaveBytes(uint24_t address, uint8_t* buffer, size_t length){
   readBytesSave(buffer, length);
 }
 
-// Sequential scan for wear-leveling ring buffer & Big-Endian headers
 uint8_t FX::loadGameState(uint8_t* gameState, size_t size){
   noInterrupts();
   uint16_t addr = 0;
@@ -507,15 +464,14 @@ uint8_t FX::loadGameState(uint8_t* gameState, size_t size){
     seekSave(addr);
     if (globalAddressSave + 2 + size > 4092) break;
 
-    // Read Big-Endian 16-bit size header
     uint8_t msb = EEPROM.read(globalAddressSave++);
     uint8_t lsb = EEPROM.read(globalAddressSave++);
     uint16_t storedSize = ((uint16_t)msb << 8) | lsb;
 
-    if (storedSize != size) break; // Reached end of valid saved game states
+    if (storedSize != size) break; 
 
     readBytesSave(gameState, size);
-    result = 1; // Mark as loaded
+    result = 1; 
     addr += size + 2;
   }
 
@@ -523,13 +479,10 @@ uint8_t FX::loadGameState(uint8_t* gameState, size_t size){
   return result;
 }
 
-// Append new game state in ring buffer or erase if space is full
 void FX::saveGameState(const uint8_t* gameState, size_t size){ 
   noInterrupts();
-
   uint16_t addr = 0;
 
-  // Locate end of previous saved states
   for (;;) {
     seekSave(addr);
     if (globalAddressSave + 2 + size > 4092) break;
@@ -542,14 +495,12 @@ void FX::saveGameState(const uint8_t* gameState, size_t size){
     addr += size + 2;
   }
 
-  // If block space is exhausted, erase save block and restart at address 0
   if ((addr + size + 2) > (4092 - EEPROMWRITEOFFSET)) {
     eraseSaveBlock(0);
     addr = 0;
   }
 
   seekSave(addr);
-  // Write Big-Endian 16-bit size header
   EEPROM.write(globalAddressSave++, (uint8_t)(size >> 8));
   EEPROM.write(globalAddressSave++, (uint8_t)(size & 0xFF));
 
@@ -599,7 +550,7 @@ void FX::drawBitmap(int16_t x, int16_t y, uint24_t address, uint8_t frame, uint8
   }
 
   int16_t skiptop;     
-  int16_t renderheight; // ИСПРАВЛЕНО: int16_t предотвращает переполнение на экранах >127px
+  int16_t renderheight; // ИСПРАВЛЕНО: Защита от переполнения
   
   if (y < 0) {
     skiptop = -y & -8; 
@@ -617,13 +568,12 @@ void FX::drawBitmap(int16_t x, int16_t y, uint24_t address, uint8_t frame, uint8
   }
   address += offset + 4; 
   
-  int16_t displayrow = (y >> 3) + skiptop; // ИСПРАВЛЕНО: защита от переполнения Y
+  int16_t displayrow = (y >> 3) + skiptop; 
   int16_t displayoffset = displayrow * WIDTH + x + skipleft;
   uint8_t yshift = bitShiftLeftUInt8(y); 
-  uint8_t lastmask = bitShiftRightMaskUInt8(8 - height); 
   
   seekData(address);
-  uint24_t currentAddress = globalAddress; // ИСПРАВЛЕНО: сохраняем якорь для чтения строк
+  uint24_t currentAddress = globalAddress; 
   
   uint8_t *bitmapBuffer = nullptr;
   int32_t bufferRowOffset = 0; 
@@ -635,7 +585,7 @@ void FX::drawBitmap(int16_t x, int16_t y, uint24_t address, uint8_t frame, uint8
   if (bmpCache && bmpSize <= BMP_CACHE_SIZE) {
     bitmapBuffer = bmpCache;
   } else {
-    bitmapBuffer = (uint8_t *) malloc (bmpSize);
+    bitmapBuffer = (uint8_t *) malloc(bmpSize);
     allocatedLocally = true;
   }
 
@@ -646,7 +596,6 @@ void FX::drawBitmap(int16_t x, int16_t y, uint24_t address, uint8_t frame, uint8
   do { 
     int32_t pointertoBmp = 0;
     
-    // ИСПРАВЛЕНО: Безопасный расчет позиции в кэше без привязки к сбившемуся globalAddress
     if (bitmapBuffer) {
       pointertoBmp = bufferRowOffset;
       bufferRowOffset += width;
@@ -657,7 +606,9 @@ void FX::drawBitmap(int16_t x, int16_t y, uint24_t address, uint8_t frame, uint8
 
     mode &= ~((1 << dbfExtraRow));
     if (yshift != 1 && displayrow < (HEIGHT / 8 - 1)) mode |= (1 << dbfExtraRow);
-    uint8_t rowmask = (renderheight < 8) ? lastmask : 0xFF;
+    
+    // ИСПРАВЛЕНО: Правильная маска для обрезки (спасает графику на границе экрана)
+    uint8_t rowmask = (renderheight >= 8) ? 0xFF : ((1 << renderheight) - 1);
     
     for (uint8_t c = 0; c < renderwidth; c++) {
       uint8_t bitmapbyte = bitmapBuffer ? bitmapBuffer[pointertoBmp++] : readUnsafe();
@@ -670,7 +621,8 @@ void FX::drawBitmap(int16_t x, int16_t y, uint24_t address, uint8_t frame, uint8
       
       if (mode & (1 << dbfMasked)) {
         uint8_t tmp = bitmapBuffer ? bitmapBuffer[pointertoBmp++] : readUnsafe();
-        if ((mode & dbfWhiteBlack) == 0) maskbyte = tmp;
+        // ИСПРАВЛЕНО: Сдвиг бита белого/черного режима
+        if ((mode & (1 << dbfWhiteBlack)) == 0) maskbyte = tmp;
       }
       uint16_t mask = multiplyUInt8(maskbyte, yshift);
       
@@ -685,7 +637,8 @@ void FX::drawBitmap(int16_t x, int16_t y, uint24_t address, uint8_t frame, uint8
       if (mode & (1 << dbfExtraRow)) {
         uint8_t display = Arduboy2Base::sBuffer[displayoffset + WIDTH];
         uint8_t pixels = bitmap >> 8;
-        if ((mode & dbfInvert) == 0) pixels ^= display;
+        // ИСПРАВЛЕНО: Запрет инверсии маски для нижней строки (чинит баг с "вырезанием" пикселей)
+        if ((mode & (1 << dbfInvert)) == 0) pixels ^= display;
         pixels &= mask >> 8;
         pixels ^= display;
         Arduboy2Base::sBuffer[displayoffset + WIDTH] = pixels;
@@ -724,7 +677,6 @@ uint8_t FX::drawFrame(){
   return moreFrames;
 }
 
-// Batch read frame header (9 bytes at once)
 uint24_t FX::drawFrame(uint24_t address){
   for(;;) {
     seekData(address);

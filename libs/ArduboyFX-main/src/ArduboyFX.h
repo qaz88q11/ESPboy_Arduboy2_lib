@@ -85,6 +85,23 @@
 
 
 
+#ifndef USE_LITTLEFS
+  #undef USE_RLE_COMPRESSION
+#endif
+
+
+/*
+ * =========================================================================
+ *               ArduboyFX Library Port for ESPboy
+ * =========================================================================
+ */
+
+//#define USE_LITTLEFS 
+//#define USE_RLE_COMPRESSION
+//#define USE_LZSS_PACKING
+
+//#define DEBUG_INFO_ON
+
 #ifdef USE_RLE_COMPRESSION
   #define USE_LITTLEFS 
 #endif
@@ -102,38 +119,30 @@
   #include <LittleFS.h>
 #endif
 
-// drawbitmap bit flags (used by modes below and internally)
-constexpr uint8_t dbfWhiteBlack   = 0; // bitmap is used as mask
-constexpr uint8_t dbfInvert       = 1; // bitmap is exclusive or-ed with display
-constexpr uint8_t dbfBlack        = 2; // bitmap will be blackened
-constexpr uint8_t dbfReverseBlack = 3; // reverses bitmap data
-constexpr uint8_t dbfMasked       = 4; // bitmap contains mask data
-constexpr uint8_t dbfFlip         = 5; // mirror bitmap
-constexpr uint8_t dbfExtraRow     = 7; // ignored (internal use)
-constexpr uint8_t dbfEndFrame     = 6; // last bitmap image of a frame
-constexpr uint8_t dbfLastFrame    = 7; // last bitmap image of the last frame
+constexpr uint8_t dbfWhiteBlack   = 0; 
+constexpr uint8_t dbfInvert       = 1; 
+constexpr uint8_t dbfBlack        = 2; 
+constexpr uint8_t dbfReverseBlack = 3; 
+constexpr uint8_t dbfMasked       = 4; 
+constexpr uint8_t dbfFlip         = 5; 
+constexpr uint8_t dbfExtraRow     = 7; 
+constexpr uint8_t dbfEndFrame     = 6; 
+constexpr uint8_t dbfLastFrame    = 7; 
 
-// drawBitmap modes with same behaviour as Arduboy library drawBitmap modes
 constexpr uint8_t dbmBlack   = (1 << dbfReverseBlack) |
                                (1 << dbfBlack) |
                                (1 << dbfWhiteBlack);
-
 constexpr uint8_t dbmWhite   = (1 << dbfWhiteBlack);
-
 constexpr uint8_t dbmInvert  = (1 << dbfInvert);
-                                                        
 constexpr uint8_t dbmFlip    = (1 << dbfFlip);
                                                         
-// additional drawBitmap modes
 constexpr uint8_t dbmNormal    = 0;
 constexpr uint8_t dbmOverwrite = 0;
-
 constexpr uint8_t dbmReverse   = (1 << dbfReverseBlack);
 constexpr uint8_t dbmMasked    = (1 << dbfMasked);
 constexpr uint8_t dbmEndFrame  = (1 << dbfEndFrame);
 constexpr uint8_t dbmLastFrame = (1 << dbfLastFrame);
 
-// drawChar bit flags
 constexpr uint8_t dcfWhiteBlack   = 0;
 constexpr uint8_t dcfInvert       = 1;
 constexpr uint8_t dcfBlack        = 2;
@@ -141,7 +150,6 @@ constexpr uint8_t dcfReverseBlack = 3;
 constexpr uint8_t dcfMasked       = 4;
 constexpr uint8_t dcfProportional = 5;
 
-// draw Font character modes
 constexpr uint8_t dcmBlack   = (1 << dcfReverseBlack) |
                                (1 << dcfBlack) |
                                (1 << dcfWhiteBlack);
@@ -157,45 +165,39 @@ constexpr uint8_t dcmProportional = (1 << dcfProportional);
 #define uint24_t uint32_t
 #define sizeof_uint24_t 3
 
-struct JedecID
-{
+struct JedecID {
   uint8_t manufacturer;
   uint8_t device;
   uint8_t size;
 };
 
-struct FXAddress
-{
+struct FXAddress {
   uint16_t page;
   uint8_t  offset;
 };
 
-struct Font
-{
+struct Font {
   uint24_t address;
   uint8_t  mode;
   uint8_t  width;
   uint8_t  height;
 };
 
-struct Cursor
-{
+struct Cursor {
   int16_t x;
   int16_t y;
   int16_t left;
   int16_t wrap;
 };
 
-struct FrameControl
-{
+struct FrameControl {
   uint24_t start;
   uint24_t current;
   uint8_t repeat;
   uint8_t count;
 };
 
-struct FrameData
-{
+struct FrameData {
   int16_t  x;
   int16_t  y;
   uint24_t bmp;
@@ -203,8 +205,7 @@ struct FrameData
   uint8_t  mode;
 };
 
-class FX
-{
+class FX {
   public:
     static void drawPixelOld(int16_t x, int16_t y, uint8_t color = 1);
     static void Rle_Decode(unsigned char *inbuf, uint32_t inSize);
@@ -241,15 +242,13 @@ class FX
     [[gnu::noinline]] static void seekData(uint24_t address);
 
     template<typename Type>
-    static void seekArrayElement(uint24_t address, uint8_t index)
-    {
+    static void seekArrayElement(uint24_t address, uint8_t index) {
       static_assert(sizeof(Type) > 0, "Cannot use a Type with a size of 0.");
       seekData(address + (index * sizeof(Type)));
     }
 
     template<typename Type>
-    static void seekArrayElementMember(uint24_t address, uint8_t index, size_t offset)
-    {
+    static void seekArrayElementMember(uint24_t address, uint8_t index, size_t offset) {
       static_assert(sizeof(Type) > 0, "Cannot use a Type with a size of 0.");
       seekData(address + ((index * sizeof(Type)) + offset));
     }
@@ -270,8 +269,7 @@ class FX
     static uint32_t readPendingLastUInt32();
 
     template<typename Type>
-    static void readObject(Type & object)
-    {
+    static void readObject(Type & object) {
       readBytes(reinterpret_cast<uint8_t *>(&object), sizeof(object));
     }
 
@@ -283,32 +281,28 @@ class FX
     [[gnu::noinline]] static uint8_t readEnd();
 
     template<typename Type>
-    static void readDataObject(uint24_t address, Type & object)
-    {
+    static void readDataObject(uint24_t address, Type & object) {
       readDataBytes(address, reinterpret_cast<uint8_t *>(&object), sizeof(object));
     }
 
     static void readDataBytes(uint24_t address, uint8_t* buffer, size_t length);
 
     template<typename Type>
-    static void readSaveObject(uint24_t address, Type & object)
-    {
+    static void readSaveObject(uint24_t address, Type & object) {
       readSaveBytes(address, reinterpret_cast<uint8_t *>(&object), sizeof(object));
     }
 
     static void readSaveBytes(uint24_t address, uint8_t* buffer, size_t length);
 
     template<typename Type>
-    static uint8_t loadGameState(Type & object)
-    {
+    static uint8_t loadGameState(Type & object) {
       return loadGameState((uint8_t*)(&object), sizeof(object));
     }
 
     [[gnu::noinline]] static uint8_t loadGameState(uint8_t* gameState, size_t size);
 
     template<typename Type>
-    static void saveGameState(const Type & object)
-    {
+    static void saveGameState(const Type & object) {
       saveGameState(reinterpret_cast<const uint8_t *>(&object), sizeof(object));
     }
 
